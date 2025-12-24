@@ -3,7 +3,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:essentials_web/util/nuevo_evento.dart';
+import '../util/nuevo_evento.dart'; // Asegúrate que la ruta sea correcta
 
 class CalendarioPage extends StatefulWidget {
   const CalendarioPage({super.key});
@@ -70,7 +70,7 @@ class _CalendarioPageState extends State<CalendarioPage> {
         });
       }
     } catch (e) {
-      print("Error: $e");
+      print("Error cargando eventos: $e");
     }
   }
 
@@ -93,9 +93,11 @@ class _CalendarioPageState extends State<CalendarioPage> {
 
     if (resultado == true) {
       await _cargarEventos();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(evento == null ? "Plan creado" : "Plan actualizado")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(evento == null ? "Plan creado" : "Plan actualizado")),
+        );
+      }
     }
   }
 
@@ -111,31 +113,32 @@ class _CalendarioPageState extends State<CalendarioPage> {
   Widget build(BuildContext context) {
     if (!_idiomaCargado) return const Center(child: CircularProgressIndicator());
 
-    // Detectamos si es pantalla grande (Web)
+    // 1. DETECTAR ANCHO PARA RESPONSIVIDAD
     bool esEscritorio = MediaQuery.of(context).size.width > 900;
 
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1200), // Ancho máximo para web
+        constraints: const BoxConstraints(maxWidth: 1200), // Límite ancho web
         child: Container(
           color: const Color.fromARGB(206, 236, 247, 223),
           child: esEscritorio 
-            ? _vistaEscritorio() // Dos columnas
-            : _vistaMovil(),     // Una columna (Tu diseño original)
+            ? _vistaEscritorio() 
+            : _vistaMovil(),
         ),
       ),
     );
   }
 
-  // --- VISTA MÓVIL (Original) ---
+  // --- VISTA MÓVIL (ARREGLADA: Scroll Completo) ---
   Widget _vistaMovil() {
-    return Column(
-      children: [
-        _calendarioWidget(),
-        Expanded(
-          child: _listaEventosWidget(),
-        ),
-      ],
+    return SingleChildScrollView( // <--- AQUÍ ESTÁ EL CAMBIO CLAVE
+      child: Column(
+        children: [
+          _calendarioWidget(),
+          // Pasamos 'false' para decirle que NO use su propio scroll, sino el de la página
+          _listaEventosWidget(conScrollPropio: false),
+        ],
+      ),
     );
   }
 
@@ -146,22 +149,23 @@ class _CalendarioPageState extends State<CalendarioPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Columna Izquierda: Calendario
+          // IZQUIERDA: CALENDARIO
           Expanded(
-            flex: 4, // 40% del ancho
+            flex: 4, 
             child: _calendarioWidget(),
           ),
           const SizedBox(width: 20),
-          // Columna Derecha: Lista de Eventos
+          // DERECHA: LISTA
           Expanded(
-            flex: 6, // 60% del ancho
+            flex: 6, 
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(25),
                 boxShadow: [BoxShadow(color: colorVerdeMedio.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 10))],
               ),
-              child: _listaEventosWidget(),
+              // Pasamos 'true' porque aquí la lista SÍ debe tener scroll propio dentro de su caja
+              child: _listaEventosWidget(conScrollPropio: true),
             ),
           ),
         ],
@@ -169,7 +173,7 @@ class _CalendarioPageState extends State<CalendarioPage> {
     );
   }
 
-  // --- WIDGET REUTILIZABLE: CALENDARIO ---
+  // --- WIDGET CALENDARIO (REUTILIZABLE) ---
   Widget _calendarioWidget() {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 20, 20, 10),
@@ -194,54 +198,94 @@ class _CalendarioPageState extends State<CalendarioPage> {
     );
   }
 
-  // --- WIDGET REUTILIZABLE: LISTA DE EVENTOS ---
-  Widget _listaEventosWidget() {
+  // --- CONTENEDOR DE LA LISTA DE EVENTOS (MEJORADO) ---
+  Widget _listaEventosWidget({required bool conScrollPropio}) {
+    // Si estamos en PC (conScrollPropio), usamos un padding fijo.
+    // Si estamos en móvil, padding normal.
+    final padding = conScrollPropio 
+        ? const EdgeInsets.all(25) 
+        : const EdgeInsets.symmetric(horizontal: 25, vertical: 10);
+
+    // CONTENIDO DE LA LISTA
+    Widget contenidoLista;
+    
+    if (_selectedEvents.isEmpty) {
+      contenidoLista = Container(
+        height: 200, // Altura mínima para que se vea el mensaje "Sin planes"
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center, 
+          children: [
+            Icon(Icons.calendar_today_outlined, size: 40, color: Colors.grey[300]), 
+            const SizedBox(height: 10), 
+            Text("Sin planes", style: TextStyle(color: Colors.grey[400]))
+          ]
+        ),
+      );
+    } else {
+      contenidoLista = ListView.builder(
+        // SI ES MÓVIL: shrinkWrap true (se ajusta al tamaño) y physics NeverScrollable (usa el scroll de la página)
+        shrinkWrap: !conScrollPropio, 
+        physics: conScrollPropio ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
+        itemCount: _selectedEvents.length,
+        itemBuilder: (context, index) {
+          final event = _selectedEvents[index];
+          return _EventoItem(
+            titulo: event['title'] ?? 'Sin título',
+            descripcion: event['description'] ?? '',
+            fechaHora: event['start_time'],
+            categoria: event['category'],
+            onEdit: () => _abrirFormulario(evento: event),
+            onDelete: () {
+              showDialog(context: context, builder: (ctx) => AlertDialog(
+                title: const Text("¿Borrar?"),
+                content: const Text("Se eliminará para siempre."),
+                actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")), TextButton(onPressed: () { Navigator.pop(ctx); _eliminarEvento(event['id']); }, child: const Text("Borrar", style: TextStyle(color: Colors.red)))]
+              ));
+            },
+          );
+        },
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20), // Un poco más de padding vertical
+      padding: padding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // HEADER DE LA LISTA
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(_selectedDay != null ? DateFormat('EEEE, d MMMM', 'es_ES').format(_selectedDay!).toUpperCase() : "SELECCIONA UN DÍA", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400])),
+              Text(
+                _selectedDay != null ? DateFormat('EEEE, d MMMM', 'es_ES').format(_selectedDay!).toUpperCase() : "SELECCIONA UN DÍA", 
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400])
+              ),
               GestureDetector(
                 onTap: () => _abrirFormulario(), 
-                child: Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: colorVerdeOscuro, borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.add, size: 20, color: Colors.white)),
+                child: Container(
+                  padding: const EdgeInsets.all(5), 
+                  decoration: BoxDecoration(color: colorVerdeOscuro, borderRadius: BorderRadius.circular(8)), 
+                  child: const Icon(Icons.add, size: 20, color: Colors.white)
+                ),
               )
             ],
           ),
           const SizedBox(height: 15),
-          Expanded(
-            child: _selectedEvents.isEmpty
-              ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.calendar_today_outlined, size: 40, color: Colors.grey[300]), const SizedBox(height: 10), Text("Sin planes", style: TextStyle(color: Colors.grey[400]))]))
-              : ListView.builder(
-                  itemCount: _selectedEvents.length,
-                  itemBuilder: (context, index) {
-                    final event = _selectedEvents[index];
-                    return _EventoItem(
-                      titulo: event['title'] ?? 'Sin título',
-                      descripcion: event['description'] ?? '',
-                      fechaHora: event['start_time'],
-                      categoria: event['category'],
-                      onEdit: () => _abrirFormulario(evento: event),
-                      onDelete: () {
-                        showDialog(context: context, builder: (ctx) => AlertDialog(
-                          title: const Text("¿Borrar?"),
-                          content: const Text("Se eliminará para siempre."),
-                          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancelar")), TextButton(onPressed: () { Navigator.pop(ctx); _eliminarEvento(event['id']); }, child: const Text("Borrar", style: TextStyle(color: Colors.red)))]
-                        ));
-                      },
-                    );
-                  },
-                ),
-          ),
+          
+          // AQUÍ LA LÓGICA DE ESPACIO
+          // Si es PC (conScrollPropio), usamos Expanded para llenar el espacio vertical restante.
+          // Si es Móvil, mostramos la lista tal cual para que crezca hacia abajo.
+          conScrollPropio 
+            ? Expanded(child: contenidoLista) 
+            : contenidoLista,
         ],
       ),
     );
   }
 }
 
+// --- ITEM INDIVIDUAL DE EVENTO ---
 class _EventoItem extends StatelessWidget {
   final String titulo, descripcion; final String? fechaHora, categoria;
   final VoidCallback onEdit, onDelete;
@@ -260,10 +304,13 @@ class _EventoItem extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 20),
       child: Row(
         children: [
+          // Hora
           Text(horaStr, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color.fromARGB(255, 94, 110, 91))),
           const SizedBox(width: 15),
+          // Línea
           Container(width: 4, height: 50, decoration: BoxDecoration(color: const Color(0xFFA1BC98), borderRadius: BorderRadius.circular(2))),
           const SizedBox(width: 15),
+          // Info
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(titulo, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
@@ -271,6 +318,7 @@ class _EventoItem extends StatelessWidget {
               if (categoria != null && categoria!.isNotEmpty) Text(categoria!, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF778873))),
             ]),
           ),
+          // Acciones
           Row(children: [
             IconButton(icon: const Icon(Icons.edit, size: 20, color: Colors.grey), onPressed: onEdit, padding: EdgeInsets.zero, constraints: const BoxConstraints()),
             const SizedBox(width: 10),

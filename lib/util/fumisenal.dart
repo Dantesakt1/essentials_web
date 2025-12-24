@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart'; //
 import 'dart:convert';
 
 class FumisenalWidget extends StatefulWidget {
@@ -11,13 +12,14 @@ class FumisenalWidget extends StatefulWidget {
 
 class _FumisenalWidgetState extends State<FumisenalWidget> {
   bool _enviando = false;
+  String? _miWebhookUrl; // Aquí guardaremos la URL específica del usuario
 
   // COLORES
   final Color colorFondo = const Color(0xFFF0F9E5); 
   final Color colorBorde = const Color(0xFFA1BC98);
   final Color colorBoton = const Color(0xFF778873);
 
-  // --- GATO ASCII (Raw String para que no se deforme) ---
+  // --- GATO ASCII (Raw String) ---
   static const String gatoAscii = r'''
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠒⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⢠⠶⠚⠛⠲⠦⣤⣀⡤⠏⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -35,22 +37,56 @@ class _FumisenalWidgetState extends State<FumisenalWidget> {
 ⠀⠀⠀⠀⠀⠀⠀⠙⠿⠝⠁⠀⠀⠀⠀⠀⠀⠀⠀⠋⠉⠙⢿⡧⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠃⠀⠀''';
 
-  Future<void> _mandarFumisenal() async {
-    setState(() => _enviando = true);
+  @override
+  void initState() {
+    super.initState();
+    _cargarWebhookUsuario(); // Cargar la URL al iniciar
+  }
 
-    // ⚠️ ASEGÚRATE QUE NO HAYA ESPACIOS AL PRINCIPIO NI FINAL DE LA URL
-    final String discordWebhookUrl = 'https://discord.com/api/webhooks/1453499172996120576/fnJloF3UCsHbs6uCq-uIoRvAOSjTTj-yb_HzaxhMRmZYyTU9cqlncYeGAHrBrUq89rHa'.trim();
+  // Lógica para obtener el webhook desde Supabase
+  Future<void> _cargarWebhookUsuario() async {
+    try {
+      final myId = Supabase.instance.client.auth.currentUser?.id;
+      if (myId == null) return;
+
+      final data = await Supabase.instance.client
+          .from('profiles')
+          .select('webhook_url') // Seleccionamos la columna nueva
+          .eq('id', myId)
+          .single();
+
+      if (mounted) {
+        setState(() {
+          _miWebhookUrl = data['webhook_url']; // Guardamos la URL
+        });
+      }
+    } catch (e) {
+      print("Error cargando webhook: $e");
+    }
+  }
+
+  Future<void> _mandarFumisenal() async {
+    // Validamos si tenemos la URL
+    if (_miWebhookUrl == null || _miWebhookUrl!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("⚠️ Configura el Webhook en tu perfil de Supabase (columna webhook_url)"),
+        backgroundColor: Colors.orange,
+      ));
+      return;
+    }
+
+    setState(() => _enviando = true);
 
     try {
       final mensaje = {
-        // Ponemos el gato entre ``` para que Discord respete los espacios
         "content": "**SE ACTIVÓ LA FUMISEÑAL (◝ ⩊ ◜) 𖠞༄**\n\n```\n$gatoAscii\n```\nFumemos mota juntos amor @everyone",
         "username": "Gato fumeta",
         "avatar_url": "https://media.tenor.com/AroWWAxsk-gAAAAM/cat-weed.gif"
       };
 
+      // Usamos la URL cargada desde la base de datos
       final response = await http.post(
-        Uri.parse(discordWebhookUrl),
+        Uri.parse(_miWebhookUrl!),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(mensaje),
       );
@@ -95,7 +131,9 @@ class _FumisenalWidgetState extends State<FumisenalWidget> {
               Text("Fumiseñal", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colorBoton)),
             ],
           ),
+          
           const SizedBox(height: 15),
+
           ClipRRect(
             borderRadius: BorderRadius.circular(15),
             child: Image.asset(
@@ -109,11 +147,14 @@ class _FumisenalWidgetState extends State<FumisenalWidget> {
               ),
             ),
           ),
+
           const SizedBox(height: 15),
+
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _enviando ? null : _mandarFumisenal,
+              // Deshabilitamos si no hay URL o si se está enviando
+              onPressed: (_enviando || _miWebhookUrl == null) ? null : _mandarFumisenal,
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorBoton,
                 foregroundColor: Colors.white,
@@ -123,7 +164,7 @@ class _FumisenalWidgetState extends State<FumisenalWidget> {
               ),
               child: _enviando 
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text("¡TE INVOCO!", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+                : Text(_miWebhookUrl == null ? "Cargando..." : "¡TE INVOCO!", style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
             ),
           )
         ],

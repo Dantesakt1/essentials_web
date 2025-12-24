@@ -5,12 +5,9 @@ import '../util/recordatorio.dart';
 import '../util/notas.dart';
 import '../util/estados.dart';
 import '../util/servicios.dart';
+import 'calendario.dart';
 
-// IMPORTS PENDIENTES
-/*
-import 'package:essentials_app/pantallas/calendario.dart';
-import 'package:essentials_app/util/perfil.dart';
-*/
+import '../util/perfil.dart';
 
 class Inicio extends StatefulWidget {
   const Inicio({super.key});
@@ -48,37 +45,48 @@ class _InicioState extends State<Inicio> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. DETECTAMOS EL TAMAÑO DE LA PANTALLA
+    bool esEscritorio = MediaQuery.of(context).size.width > 900;
+
     // --- 1. VISTA DASHBOARD (Inicio) ---
     Widget vistaDashboard = SingleChildScrollView(
       padding: const EdgeInsets.all(30),
       child: Column(
         children: [
-          Row(
-            // CAMBIO CLAVE: Alineamos todo al CENTRO verticalmente
-            crossAxisAlignment: CrossAxisAlignment.center, 
-            children: [
-              // COLUMNA IZQUIERDA (Recordatorio + Notas)
-              Expanded(
-                flex: 1, 
-                child: Column(
-                  children: const [
-                    Recordatorio(),
-                    SizedBox(height: 20),
-                    Notas(),
-                  ],
+          if (esEscritorio) 
+            // --- VISTA PC ---
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center, 
+              children: [
+                Expanded(
+                  flex: 1, 
+                  child: Column(
+                    children: const [
+                      Recordatorio(),
+                      SizedBox(height: 20),
+                      Notas(),
+                    ],
+                  ),
                 ),
-              ),
-              
-              const SizedBox(width: 20),
-              
-              // COLUMNA DERECHA (Estados)
-              // Quitamos el Padding manual para que el CrossAxisAlignment.center haga su magia
-              const Expanded(
-                flex: 1, 
-                child: Estados(), 
-              ),
-            ],
-          ),
+                const SizedBox(width: 20),
+                const Expanded(
+                  flex: 1, 
+                  child: Estados(), 
+                ),
+              ],
+            )
+          else 
+            // --- VISTA MÓVIL ---
+            Column(
+              children: const [
+                Recordatorio(),
+                SizedBox(height: 20),
+                Notas(),
+                SizedBox(height: 20),
+                Estados(),
+              ],
+            ),
+
           const SizedBox(height: 50),
         ],
       ),
@@ -99,16 +107,19 @@ class _InicioState extends State<Inicio> {
 
     final List<Widget> paginas = [
       vistaDashboard,                      
-      vistaServicios,                      
-      const Center(child: Text("Calendario - Próximamente")), 
+      vistaServicios,
+      // <--- 2. AQUÍ CONECTAMOS EL CALENDARIO REAL ---
+      const CalendarioPage(), 
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf0f9e5), // Tu color de fondo
+      backgroundColor: const Color(0xFFf0f9e5),
       appBar: _barraNavegacionWeb(),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100), 
+          // Si estamos en el calendario (índice 2), dejamos que use su propio ancho (1200)
+          // Si no, usamos el del dashboard (1100)
+          constraints: BoxConstraints(maxWidth: esEscritorio ? (_indiceActual == 2 ? 1200 : 1100) : double.infinity), 
           child: paginas[_indiceActual],
         ),
       ),
@@ -116,6 +127,8 @@ class _InicioState extends State<Inicio> {
   }
 
   PreferredSizeWidget _barraNavegacionWeb() {
+    bool esEscritorio = MediaQuery.of(context).size.width > 600;
+
     return AppBar(
       backgroundColor: const Color(0xFFD2DCB6),
       elevation: 0,
@@ -139,19 +152,37 @@ class _InicioState extends State<Inicio> {
         ),
         child: Image.asset('assets/images/gato-icon.png', fit: BoxFit.contain, errorBuilder: (c,e,s) => const Icon(Icons.pets)),
       ),
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _botonNav("Inicio", 0),
-          const SizedBox(width: 10),
-          _botonNav("Servicios", 1),
-          const SizedBox(width: 10),
-          _botonNav("Calendario", 2),
-        ],
-      ),
+      
+      title: esEscritorio 
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _botonNav("Inicio", 0),
+              const SizedBox(width: 10),
+              _botonNav("Servicios", 1),
+              const SizedBox(width: 10),
+              _botonNav("Calendario", 2),
+            ],
+          )
+        : Row( 
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _botonIcono(Icons.home, 0),
+              const SizedBox(width: 10),
+              _botonIcono(Icons.grid_view_rounded, 1),
+              const SizedBox(width: 10),
+              _botonIcono(Icons.calendar_month, 2),
+            ],
+          ),
+
       actions: [
         GestureDetector(
-          onTap: () {},
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const PantallaPerfil()),
+            );
+          },
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 15),
             padding: const EdgeInsets.all(8),
@@ -178,10 +209,21 @@ class _InicioState extends State<Inicio> {
       child: Text(
         titulo,
         style: TextStyle(
-          color: Colors.black87,
+          color: const Color(0xFF778873),
           fontWeight: activo ? FontWeight.bold : FontWeight.normal,
         ),
       ),
+    );
+  }
+
+  Widget _botonIcono(IconData icono, int index) {
+    bool activo = _indiceActual == index;
+    return IconButton(
+      onPressed: () => setState(() => _indiceActual = index),
+      style: IconButton.styleFrom(
+        backgroundColor: activo ? Colors.white.withOpacity(0.4) : null,
+      ),
+      icon: Icon(icono, color: const Color(0xFF778873)),
     );
   }
 }

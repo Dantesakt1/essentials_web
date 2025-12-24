@@ -1,5 +1,5 @@
 name: essentials_web
-description: "A new Flutter project."
+description: "Regalin de navidad."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -37,6 +37,10 @@ dependencies:
   supabase_flutter: ^2.12.0
 
   intl: ^0.20.2  
+  flutter_fortune_wheel: ^1.3.2
+  rxdart: ^0.28.0
+  table_calendar: ^3.2.0
+  image_picker: ^1.2.1
 
 dev_dependencies:
   flutter_test:

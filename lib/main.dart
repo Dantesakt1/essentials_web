@@ -25,7 +25,7 @@ class MiApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Essentials App', // Le puse un título para la pestaña del navegador
+      title: 'Essentials 𖹭', // Le puse un título para la pestaña del navegador
       theme: ThemeData(
         fontFamily: 'Poppins',
         useMaterial3: true,

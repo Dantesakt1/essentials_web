@@ -160,7 +160,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
                             ),
                             child: _cargando
                                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : const Text("Next >", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                : const Text("Login >", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           ),
                         ),
                       ],

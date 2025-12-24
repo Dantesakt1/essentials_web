@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// TUS UTILIDADES
 import '../util/recordatorio.dart';
 import '../util/notas.dart';
 import '../util/estados.dart';
 import '../util/servicios.dart';
-import 'calendario.dart';
+import '../util/fumisenal.dart'; // <--- 1. IMPORTAR LA FUMISEÑAL
 
+// TUS PANTALLAS
+import 'calendario.dart';
 import '../util/perfil.dart';
 
 class Inicio extends StatefulWidget {
@@ -56,7 +59,7 @@ class _InicioState extends State<Inicio> {
           if (esEscritorio) 
             // --- VISTA PC ---
             Row(
-              crossAxisAlignment: CrossAxisAlignment.center, 
+              crossAxisAlignment: CrossAxisAlignment.start, // Alineado arriba
               children: [
                 Expanded(
                   flex: 1, 
@@ -65,6 +68,8 @@ class _InicioState extends State<Inicio> {
                       Recordatorio(),
                       SizedBox(height: 20),
                       Notas(),
+                      SizedBox(height: 20),
+                      FumisenalWidget(), // <--- 2. FUMISEÑAL AQUÍ (PC)
                     ],
                   ),
                 ),
@@ -84,6 +89,8 @@ class _InicioState extends State<Inicio> {
                 Notas(),
                 SizedBox(height: 20),
                 Estados(),
+                SizedBox(height: 20),
+                FumisenalWidget(), // <--- 3. FUMISEÑAL AQUÍ (MÓVIL)
               ],
             ),
 
@@ -108,7 +115,6 @@ class _InicioState extends State<Inicio> {
     final List<Widget> paginas = [
       vistaDashboard,                      
       vistaServicios,
-      // <--- 2. AQUÍ CONECTAMOS EL CALENDARIO REAL ---
       const CalendarioPage(), 
     ];
 
@@ -117,8 +123,6 @@ class _InicioState extends State<Inicio> {
       appBar: _barraNavegacionWeb(),
       body: Center(
         child: ConstrainedBox(
-          // Si estamos en el calendario (índice 2), dejamos que use su propio ancho (1200)
-          // Si no, usamos el del dashboard (1100)
           constraints: BoxConstraints(maxWidth: esEscritorio ? (_indiceActual == 2 ? 1200 : 1100) : double.infinity), 
           child: paginas[_indiceActual],
         ),
@@ -178,6 +182,7 @@ class _InicioState extends State<Inicio> {
       actions: [
         GestureDetector(
           onTap: () {
+            // NAVEGACIÓN AL PERFIL (YA ESTABA BIEN, PERO AQUÍ ESTÁ ASEGURADA)
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const PantallaPerfil()),

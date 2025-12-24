@@ -41,6 +41,7 @@ dependencies:
   rxdart: ^0.28.0
   table_calendar: ^3.2.0
   image_picker: ^1.2.1
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

@@ -158,7 +158,7 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
           icon: Icon(Icons.arrow_back_ios_new, color: colorTexto),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text("Mi Perfil", style: TextStyle(color: colorTexto, fontWeight: FontWeight.bold)),
+        title: Text("Perfil", style: TextStyle(color: colorTexto, fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
 
@@ -350,7 +350,7 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
             ),
-            child: const Text("Guardar Cambios", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: const Text("Guardar cambios", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ),
         const SizedBox(height: 15),

@@ -46,7 +46,7 @@ class _FumisenalWidgetState extends State<FumisenalWidget> {
         // Ponemos el gato entre ``` para que Discord respete los espacios
         "content": "**SE ACTIVÓ LA FUMISEÑAL (◝ ⩊ ◜) 𖠞༄**\n\n```\n$gatoAscii\n```\nFumemos mota juntos amor @everyone",
         "username": "Gato fumeta",
-        "avatar_url": "https://i.pinimg.com/736x/3c/30/68/3c3068abab147b3bfe0630aa361635a8.jpg"
+        "avatar_url": "https://media.tenor.com/AroWWAxsk-gAAAAM/cat-weed.gif"
       };
 
       final response = await http.post(

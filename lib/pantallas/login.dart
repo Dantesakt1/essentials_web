@@ -44,7 +44,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("¡Bienvenid@! 💖"), backgroundColor: Color(0xFF778873)),
+            const SnackBar(content: Text("¡Hola amor ヾ(＾∇＾)!"), backgroundColor: Color(0xFF778873)),
         );
         
         Navigator.pushReplacement(
